@@ -92,7 +92,7 @@ class ClusteringParser:
         fields = line.split("\t")
 
         if len(fields) != 9:
-            raise Exception("Invalid SPEC line encountered: " + line)
+            raise Exception("Invalid SPEC line encountered: " + line + "\n The fields len is " + str(len(fields)) + " rather than 9")
 
         title = fields[1]
         sequences = fields[3].split(",")
@@ -149,16 +149,45 @@ class ClusteringParser:
         """
         if len(ptm_string) < 1:
             return list()
+        origin_ptm_strings = ptm_string.split(",")
+        ptm_strings = list()
+        special_ptm_start = False 
 
-        ptm_strings = ptm_string.split(",")
+        #deal with "3-UNIMOD:35,3-[PSI-MS, MS:1001524, fragment neutral loss, 63.998283]" style ptm strings
+        new_ptm_string = ""
+        for cur_ptm_string in origin_ptm_strings:
+            if special_ptm_start:
+                if "]" in cur_ptm_string:
+                    special_ptm_start = False
+                    new_ptm_string = new_ptm_string + cur_ptm_string
+                    ptm_strings.append(new_ptm_string)
+                else:
+                    new_ptm_string = new_ptm_string + cur_ptm_string
+                continue
+
+            if "[" in cur_ptm_string:
+                special_ptm_start = True
+                new_ptm_string = cur_ptm_string
+            else:
+                ptm_strings.append(cur_ptm_string)
+
         ptms = list()
 
         for cur_ptm_string in ptm_strings:
-            fields = cur_ptm_string.split("-")
-            if len(fields) != 2:
-                raise Exception("Invalid PTM definition encountered: " + cur_ptm_string)
+            fields = cur_ptm_string.split("-",2)
+            if len(fields) == 2:
+                try:
+                    ptms.append(objects.PTM(int(fields[0]), fields[1]))
+                except:
+                    continue
+            #deal with "3-[PSI-MS, MS:1001524, fragment neutral loss, 63.998283]" style ptm strings
+            if len(fields) == 3:
+                if fields[1].startswith("[") and fields[2].endswith("]"):
+                    ptms.append(objects.PTM(int(fields[0]), fields[1]+fields[2]))
+                else:
+                    print("PTM String:" + cur_ptm_string + " has " + str(len(fields)) + " fields, it should be 2")
+                    raise Exception("Invalid PTM definition encountered: " + cur_ptm_string)
 
-            ptms.append(objects.PTM(int(fields[0]), fields[1]))
 
         return ptms
 
