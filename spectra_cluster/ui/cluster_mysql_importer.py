@@ -1,17 +1,17 @@
 """
-cluster_sqlite_importer
+cluster_mysql_importer
 
-Command line interface to the spectra-cluster sqlite importer. This tool import all listed  
-clustering files into sqlite as a sigle release table. 
+Command line interface to the spectra-cluster mysql importer. This tool import all listed  
+clustering files into mysql as a sigle release table. 
 
 Usage:
-  cluster_sqlite_importer.py --input <path_to_clustering_files>
+  cluster_mysql_importer.py --input <path_to_clustering_files>
                        [--min_size <size>] 
                        [--min_ratio <ratio>]
                        [--min_identified <spectra>]
                        [--table_name <table_name>] 
                        [(--only_identified | --only_unidentified)]
-  cluster_sqlite_importer.py (--help | --version)
+  cluster_mysql_importer.py (--help | --version)
 
 Options:
   -i, --input=<path_to_clustering_files>   Path to the directory with .clustering result files to process.
@@ -34,7 +34,7 @@ from docopt import docopt
 package_path = os.path.abspath(os.path.split(sys.argv[0])[0]) + os.path.sep + ".." + os.path.sep + ".."
 sys.path.insert(0, package_path)
 
-import spectra_cluster.analyser.cluster_sqlite_importer as cluster_sqlite_importer
+import spectra_cluster.analyser.cluster_mysql_importer as cluster_mysql_importer
 import spectra_cluster.clustering_parser as clustering_parser
 
 
@@ -45,7 +45,7 @@ def create_analyser(arguments):
     :param arguments: The command line parameters
     :return: An Comparer object
     """
-    analyser = cluster_sqlite_importer.ClusterSqliteImporter()
+    analyser = cluster_mysql_importer.ClusterSqliteImporter()
 
     if arguments["--only_identified"]:
         analyser.add_to_unidentified = False
@@ -75,7 +75,7 @@ def main():
     Primary entry function for the CLI.
     :return:
     """
-    arguments = docopt(__doc__, version='cluster_sqlite_importer 1.0 BETA')
+    arguments = docopt(__doc__, version='cluster_mysql_importer 1.0 BETA')
     print(arguments)
 #    sys.exit(1)
 
