@@ -66,6 +66,7 @@ class ClusterSqliteImporter(common.AbstractAnalyser):
                         "cluster_ratio float NOT NULL,"    + \
                         "spectrum_title varchar(100) COLLATE utf8_bin NOT NULL,"+ \
                         "spec_prj_id varchar(10) COLLATE utf8_bin NOT NULL,"   + \
+                        "is_spec_identified TINYINT(1) NOT NULL,"   + \
                         "PRIMARY KEY (id)" + ")ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;"
         print(tb_create)
         try:
@@ -148,9 +149,9 @@ class ClusterSqliteImporter(common.AbstractAnalyser):
                     for spectrum in spectra:
                         project_id = self.get_project_id(spectrum.title)
                         insert_sql = "INSERT INTO `" + self.table_name + "`" \
-                            "(cluster_id, cluster_ratio, spectrum_title, spec_prj_id )" + \
+                            "(cluster_id, cluster_ratio, spectrum_title, spec_prj_id, is_spec_identified)" + \
                             "VALUES" + \
-                            "('" + cluster.id + "', '" + str(cluster.max_il_ratio) + "', '" + spectrum.title + "', '" + project_id + "');"
+                            "('" + cluster.id + "', '" + str(cluster.max_il_ratio) + "', '" + spectrum.title + "', '" + project_id + "', '" + str(int(spectrum.is_identified())) + "');"
                         cursor.execute(insert_sql)        
             self.connection.commit()
         finally:
