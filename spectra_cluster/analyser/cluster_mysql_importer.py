@@ -64,9 +64,13 @@ class ClusterSqliteImporter(common.AbstractAnalyser):
                         "id int(15) NOT NULL AUTO_INCREMENT,"    + \
                         "cluster_id varchar(100) COLLATE utf8_bin NOT NULL,"    + \
                         "cluster_ratio float NOT NULL,"    + \
-                        "spectrum_title varchar(100) COLLATE utf8_bin NOT NULL,"+ \
+                        "spectrum_title varchar(200) COLLATE utf8_bin NOT NULL,"+ \
                         "spec_prj_id varchar(10) COLLATE utf8_bin NOT NULL,"   + \
                         "is_spec_identified TINYINT(1) NOT NULL,"   + \
+                        "PRIMARY KEY (id)" + ")ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;"
+        tb_create_prjs = "CREATE TABLE `" + self.table_name + "_projects` ("                     + \
+                        "id int(10) NOT NULL AUTO_INCREMENT,"    + \
+                        "project_id varchar(10) COLLATE utf8_bin NOT NULL,"   + \
                         "PRIMARY KEY (id)" + ")ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;"
         print(tb_create)
         try:
@@ -96,8 +100,10 @@ class ClusterSqliteImporter(common.AbstractAnalyser):
                 if create_new:
                     if table_exists:
                         cursor.execute("DROP TABLE IF EXISTS `" + self.table_name + "`;")
+                        cursor.execute("DROP TABLE IF EXISTS `" + self.table_name + "_projects`;")
                     print("Start creating table " + self.table_name)
                     cursor.execute(tb_create)
+                    cursor.execute(tb_create_prjs)
                     self.connection.commit()
         finally:
             print ("checked table")
@@ -141,18 +147,27 @@ class ClusterSqliteImporter(common.AbstractAnalyser):
         self.taxids = frozenset(taxids)
         project_id
         """
-
+        projects = set() 
         try:
             with self.connection.cursor() as cursor:
                 for cluster in self.cluster_list:
                     spectra = cluster.get_spectra()
                     for spectrum in spectra:
                         project_id = self.get_project_id(spectrum.title)
+                        projects.add(project_id)
                         insert_sql = "INSERT INTO `" + self.table_name + "`" \
                             "(cluster_id, cluster_ratio, spectrum_title, spec_prj_id, is_spec_identified)" + \
                             "VALUES" + \
                             "('" + cluster.id + "', '" + str(cluster.max_il_ratio) + "', '" + spectrum.title + "', '" + project_id + "', '" + str(int(spectrum.is_identified())) + "');"
+                        if spectrum.title == None or len(spectrum.title)<1:
+                            print("spectrum title: " + spectrum.title)
                         cursor.execute(insert_sql)        
+                for project_id in projects:
+                    insert_sql = "INSERT INTO `" + self.table_name + "_projects`" \
+                        "(project_id)" + \
+                        "VALUES" + \
+                        "('" + project_id + "');"
+                    cursor.execute(insert_sql)        
             self.connection.commit()
         finally:
             print("inserted a cluster list in to table")
