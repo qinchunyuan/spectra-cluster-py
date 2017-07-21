@@ -32,6 +32,8 @@ class ClusterSqliteImporter(common.AbstractAnalyser):
         self.file_index = 0
         self.table_name = "cluster_table_temp1"
         self.table = None 
+        self.over_write_table = False
+        projects = set() 
        
         # intermediate data structures
         self.cluster_list = [] 
@@ -86,7 +88,7 @@ class ClusterSqliteImporter(common.AbstractAnalyser):
                     table_exists = False
                     create_new = True
                 
-                if table_exists: 
+                if table_exists and not self.over_write_table: 
                     print("The table" + self.table_name + "is already exists, do you really want to overwrite it?")
                     answer = input("please input yes | no:  ")
                     while(answer != 'yes' and answer != 'no'):
@@ -97,8 +99,9 @@ class ClusterSqliteImporter(common.AbstractAnalyser):
                     else:
                         create_new = True 
 
-                if create_new:
+                if self.over_write_table or create_new :
                     if table_exists:
+                        print("Start droping the tables")
                         cursor.execute("DROP TABLE IF EXISTS `" + self.table_name + "`;")
                         cursor.execute("DROP TABLE IF EXISTS `" + self.table_name + "_projects`;")
                     print("Start creating table " + self.table_name)
@@ -131,6 +134,18 @@ class ClusterSqliteImporter(common.AbstractAnalyser):
             print("No PRD000000 or PXD000000 be found in the title" + title)
             return None
         
+    def import_projects(self):
+        for project_id in self.projects:
+            insert_sql = "INSERT INTO `" + self.table_name + "_projects`" \
+                         "(project_id)" + \
+                         "VALUES" + \
+                         "('" + project_id + "');"
+        cursor.execute(insert_sql)        
+        self.connection.commit()
+ 
+    
+    
+    
     def import_afile(self):
         """
         import the cluster list  of a file to mysql 
@@ -147,14 +162,13 @@ class ClusterSqliteImporter(common.AbstractAnalyser):
         self.taxids = frozenset(taxids)
         project_id
         """
-        projects = set() 
         try:
             with self.connection.cursor() as cursor:
                 for cluster in self.cluster_list:
                     spectra = cluster.get_spectra()
                     for spectrum in spectra:
                         project_id = self.get_project_id(spectrum.title)
-                        projects.add(project_id)
+                        self.projects.add(project_id)
                         insert_sql = "INSERT INTO `" + self.table_name + "`" \
                             "(cluster_id, cluster_ratio, spectrum_title, spec_prj_id, is_spec_identified)" + \
                             "VALUES" + \
@@ -162,13 +176,7 @@ class ClusterSqliteImporter(common.AbstractAnalyser):
                         if spectrum.title == None or len(spectrum.title)<1:
                             print("spectrum title: " + spectrum.title)
                         cursor.execute(insert_sql)        
-                for project_id in projects:
-                    insert_sql = "INSERT INTO `" + self.table_name + "_projects`" \
-                        "(project_id)" + \
-                        "VALUES" + \
-                        "('" + project_id + "');"
-                    cursor.execute(insert_sql)        
-            self.connection.commit()
+           self.connection.commit()
         finally:
             print("inserted a cluster list in to table")
 
