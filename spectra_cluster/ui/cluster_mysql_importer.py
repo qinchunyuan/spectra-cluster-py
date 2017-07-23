@@ -109,6 +109,7 @@ def main():
         analyser.import_afile() 
         analyser.clear() 
         print("Done importing of " + clustering_file)
+    analyser.import_projects()
 
 
 

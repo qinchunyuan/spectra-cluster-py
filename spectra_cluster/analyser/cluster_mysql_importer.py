@@ -33,7 +33,7 @@ class ClusterSqliteImporter(common.AbstractAnalyser):
         self.table_name = "cluster_table_temp1"
         self.table = None 
         self.over_write_table = False
-        projects = set() 
+        self.projects = set() 
        
         # intermediate data structures
         self.cluster_list = [] 
@@ -66,6 +66,12 @@ class ClusterSqliteImporter(common.AbstractAnalyser):
                         "id int(15) NOT NULL AUTO_INCREMENT,"    + \
                         "cluster_id varchar(100) COLLATE utf8_bin NOT NULL,"    + \
                         "cluster_ratio float NOT NULL,"    + \
+                        "n_spec int(10) NOT NULL,"    + \
+                        "n_id_spec int (10) NOT NULL,"    + \
+                        "n_unid_spec int(10) NOT NULL,"    + \
+                        "PRIMARY KEY (id)" + ")ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;"
+        tb_create_spec = "CREATE TABLE `" + self.table_name + "_spec` ("                     + \
+                        "id int(15) NOT NULL AUTO_INCREMENT,"    + \
                         "spectrum_title varchar(200) COLLATE utf8_bin NOT NULL,"+ \
                         "spec_prj_id varchar(10) COLLATE utf8_bin NOT NULL,"   + \
                         "is_spec_identified TINYINT(1) NOT NULL,"   + \
@@ -75,6 +81,8 @@ class ClusterSqliteImporter(common.AbstractAnalyser):
                         "project_id varchar(10) COLLATE utf8_bin NOT NULL,"   + \
                         "PRIMARY KEY (id)" + ")ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;"
         print(tb_create)
+        print(tb_create_spec)
+        print(tb_create_prjs)
         try:
             with self.connection.cursor() as cursor:
                 cursor.execute(tb_exists)
@@ -103,10 +111,12 @@ class ClusterSqliteImporter(common.AbstractAnalyser):
                     if table_exists:
                         print("Start droping the tables")
                         cursor.execute("DROP TABLE IF EXISTS `" + self.table_name + "`;")
+                        cursor.execute("DROP TABLE IF EXISTS `" + self.table_name + "_spec`;")
                         cursor.execute("DROP TABLE IF EXISTS `" + self.table_name + "_projects`;")
                     print("Start creating table " + self.table_name)
                     cursor.execute(tb_create)
                     cursor.execute(tb_create_prjs)
+                    cursor.execute(tb_create_spec)
                     self.connection.commit()
         finally:
             print ("checked table")
@@ -135,12 +145,13 @@ class ClusterSqliteImporter(common.AbstractAnalyser):
             return None
         
     def import_projects(self):
-        for project_id in self.projects:
-            insert_sql = "INSERT INTO `" + self.table_name + "_projects`" \
-                         "(project_id)" + \
-                         "VALUES" + \
-                         "('" + project_id + "');"
-        cursor.execute(insert_sql)        
+        with self.connection.cursor() as cursor:
+            for project_id in self.projects:
+                insert_sql = "INSERT INTO `" + self.table_name + "_projects`" \
+                             "(project_id)" + \
+                             "VALUES" + \
+                             "('" + project_id + "');"
+                cursor.execute(insert_sql)        
         self.connection.commit()
  
     
@@ -154,6 +165,9 @@ class ClusterSqliteImporter(common.AbstractAnalyser):
         self.precursor_mz = precursor_mz
         self.consensus_mz = consensus_mz
         self.consensus_intens = consensus_intens
+        self.n_spectra = len(self._spectra)
+        self.identified_spectra = 0
+        self.unidentified_spectra = 0
         
         spectrum:
         self.title = title
@@ -166,17 +180,24 @@ class ClusterSqliteImporter(common.AbstractAnalyser):
             with self.connection.cursor() as cursor:
                 for cluster in self.cluster_list:
                     spectra = cluster.get_spectra()
+                    insert_sql = "INSERT INTO `" + self.table_name + "`" \
+                            "(cluster_id, cluster_ratio, n_spec, n_id_spec, n_unid_spec)" + \
+                            "VALUES" + \
+                            "('" + cluster.id + "', '" + str(cluster.max_il_ratio) + "', '" + str(cluster.n_spectra) + "', '" + str(cluster.identified_spectra) + "', '" + str(cluster.unidentified_spectra) + "');"
+                    cursor.execute(insert_sql)        
                     for spectrum in spectra:
                         project_id = self.get_project_id(spectrum.title)
                         self.projects.add(project_id)
-                        insert_sql = "INSERT INTO `" + self.table_name + "`" \
-                            "(cluster_id, cluster_ratio, spectrum_title, spec_prj_id, is_spec_identified)" + \
+                        insert_sql2 = "INSERT INTO `" + self.table_name + "_spec`" \
+                            "(spectrum_title, spec_prj_id, is_spec_identified)" + \
                             "VALUES" + \
-                            "('" + cluster.id + "', '" + str(cluster.max_il_ratio) + "', '" + spectrum.title + "', '" + project_id + "', '" + str(int(spectrum.is_identified())) + "');"
+                            "('" + spectrum.title + "', '" + project_id + "', '" + str(int(spectrum.is_identified())) + "');"
                         if spectrum.title == None or len(spectrum.title)<1:
-                            print("spectrum title: " + spectrum.title)
-                        cursor.execute(insert_sql)        
-           self.connection.commit()
+                            print("Wrong spectrum title: " + spectrum.title)
+                        cursor.execute(insert_sql2)        
+            self.connection.commit()
+        except Exception as ex:
+            print(ex.message)
         finally:
             print("inserted a cluster list in to table")
 
