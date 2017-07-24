@@ -91,8 +91,8 @@ class ClusteringParser:
         """
         fields = line.split("\t")
 
-        if len(fields) != 9:
-            raise Exception("Invalid SPEC line encountered: " + line + "\n The fields len is " + str(len(fields)) + " rather than 9")
+        if len(fields) < 9:
+            raise Exception("Invalid SPEC line encountered: " + line)
 
         title = fields[1]
         sequences = fields[3].split(",")
@@ -101,6 +101,12 @@ class ClusteringParser:
         charge = float(fields[5])
         taxids = fields[6].split(",")
         ptm_strings = fields[7].split(";")
+        similarity_score = float(fields[8])
+
+        json_properties = fields[9] if len(fields) >= 10 else "{}"
+
+        if title == "PXD000443;PRIDE_Exp_Complete_Ac_31019.xml;spectrum=377050":
+            pass
 
         # make sure sequences and ptms have the same length
         if len(sequences) != len(ptm_strings):
@@ -109,7 +115,7 @@ class ClusteringParser:
 
         psms = ClusteringParser._create_psms(sequences, ptm_strings)
 
-        return objects.Spectrum(title, prec_mz, charge, taxids, psms)
+        return objects.Spectrum(title, prec_mz, charge, taxids, psms, similarity_score, json_properties)
 
     @staticmethod
     def _create_psms(sequences, ptm_strings):
@@ -149,45 +155,53 @@ class ClusteringParser:
         """
         if len(ptm_string) < 1:
             return list()
-        origin_ptm_strings = ptm_string.split(",")
-        ptm_strings = list()
-        special_ptm_start = False 
 
-        #deal with "3-UNIMOD:35,3-[PSI-MS, MS:1001524, fragment neutral loss, 63.998283]" style ptm strings
-        new_ptm_string = ""
-        for cur_ptm_string in origin_ptm_strings:
-            if special_ptm_start:
-                if "]" in cur_ptm_string:
-                    special_ptm_start = False
-                    new_ptm_string = new_ptm_string + cur_ptm_string
-                    ptm_strings.append(new_ptm_string)
-                else:
-                    new_ptm_string = new_ptm_string + cur_ptm_string
+        ptm_strings = ptm_string.split(",")
+
+        # merge possible PTM tags within "[" and "]"
+        merged_ptm_strings = list()
+        current_ptm_string = ""
+        in_tags = False
+        for ptm_string in ptm_strings:
+            if "[" in ptm_string:
+                in_tags = True
+                current_ptm_string = ptm_string.strip() + ","
                 continue
+            # this is a standard mod
+            elif not in_tags:
+                merged_ptm_strings.append(ptm_string)
+                continue
+            # process fields that are within tags
+            if in_tags:
+                current_ptm_string += ptm_string.strip() + ","
+            # if at the end of the tag, save it and reset it
+            if in_tags and "]" in ptm_string:
+                in_tags = False
+                # save the PTM string without the trailing ","
+                merged_ptm_strings.append(current_ptm_string[:-1])
+                current_ptm_string = ""
 
-            if "[" in cur_ptm_string:
-                special_ptm_start = True
-                new_ptm_string = cur_ptm_string
-            else:
-                ptm_strings.append(cur_ptm_string)
+        # remove unused variable
+        del ptm_string, current_ptm_string, in_tags
 
         ptms = list()
 
-        for cur_ptm_string in ptm_strings:
-            fields = cur_ptm_string.split("-",2)
-            if len(fields) == 2:
-                try:
-                    ptms.append(objects.PTM(int(fields[0]), fields[1]))
-                except:
-                    continue
-            #deal with "3-[PSI-MS, MS:1001524, fragment neutral loss, 63.998283]" style ptm strings
-            if len(fields) == 3:
-                if fields[1].startswith("[") and fields[2].endswith("]"):
-                    ptms.append(objects.PTM(int(fields[0]), fields[1]+fields[2]))
-                else:
-                    print("PTM String:" + cur_ptm_string + " has " + str(len(fields)) + " fields, it should be 2")
-                    raise Exception("Invalid PTM definition encountered: " + cur_ptm_string)
+        for cur_ptm_string in merged_ptm_strings:
+            first_index = cur_ptm_string.find("-")
 
+            if first_index < 0:
+                print("Warning: Ignoring invalid PTM definition: " + cur_ptm_string)
+                continue
+
+            position = cur_ptm_string[0:first_index]
+            accession = cur_ptm_string[first_index + 1:]
+
+            # ignore chemmod
+            if "CHEMMOD" in position:
+                print("Warning: Ignoring PTM (" + cur_ptm_string + ")")
+                continue
+
+            ptms.append(objects.PTM(int(position), accession))
 
         return ptms
 
