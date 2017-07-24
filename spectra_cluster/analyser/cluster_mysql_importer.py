@@ -75,7 +75,9 @@ class ClusterSqliteImporter(common.AbstractAnalyser):
                         "spectrum_title varchar(200) COLLATE utf8_bin NOT NULL,"+ \
                         "spec_prj_id varchar(10) COLLATE utf8_bin NOT NULL,"   + \
                         "is_spec_identified TINYINT(1) NOT NULL,"   + \
-                        "PRIMARY KEY (id)" + ")ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;"
+                        "cluster_fk int(15) NOT NULL,"   + \
+                        "PRIMARY KEY (id)," + "CONSTRAINT FK_cluster_spec FOREIGN KEY (cluster_fk) REFERENCES " +self.table_name + "(id)" +\
+                        ")ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;"
         tb_create_prjs = "CREATE TABLE `" + self.table_name + "_projects` ("                     + \
                         "id int(10) NOT NULL AUTO_INCREMENT,"    + \
                         "project_id varchar(10) COLLATE utf8_bin NOT NULL,"   + \
@@ -110,9 +112,9 @@ class ClusterSqliteImporter(common.AbstractAnalyser):
                 if self.over_write_table or create_new :
                     if table_exists:
                         print("Start droping the tables")
-                        cursor.execute("DROP TABLE IF EXISTS `" + self.table_name + "`;")
                         cursor.execute("DROP TABLE IF EXISTS `" + self.table_name + "_spec`;")
                         cursor.execute("DROP TABLE IF EXISTS `" + self.table_name + "_projects`;")
+                        cursor.execute("DROP TABLE IF EXISTS `" + self.table_name + "`;")
                     print("Start creating table " + self.table_name)
                     cursor.execute(tb_create)
                     cursor.execute(tb_create_prjs)
@@ -185,13 +187,14 @@ class ClusterSqliteImporter(common.AbstractAnalyser):
                             "VALUES" + \
                             "('" + cluster.id + "', '" + str(cluster.max_il_ratio) + "', '" + str(cluster.n_spectra) + "', '" + str(cluster.identified_spectra) + "', '" + str(cluster.unidentified_spectra) + "');"
                     cursor.execute(insert_sql)        
+                    cluster_key = cursor.lastrowid
                     for spectrum in spectra:
                         project_id = self.get_project_id(spectrum.title)
                         self.projects.add(project_id)
                         insert_sql2 = "INSERT INTO `" + self.table_name + "_spec`" \
-                            "(spectrum_title, spec_prj_id, is_spec_identified)" + \
+                            "(spectrum_title, spec_prj_id, is_spec_identified, cluster_fk)" + \
                             "VALUES" + \
-                            "('" + spectrum.title + "', '" + project_id + "', '" + str(int(spectrum.is_identified())) + "');"
+                            "('" + spectrum.title + "', '" + project_id + "', '" + str(int(spectrum.is_identified())) + "', '" + str(cluster_key) +"');"
                         if spectrum.title == None or len(spectrum.title)<1:
                             print("Wrong spectrum title: " + spectrum.title)
                         cursor.execute(insert_sql2)        
