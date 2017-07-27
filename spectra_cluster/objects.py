@@ -4,6 +4,7 @@
 # ------------------------------
 
 import re
+import json
 
 
 class Cluster:
@@ -39,6 +40,7 @@ class Cluster:
         self.n_spectra = len(self._spectra)
         self.identified_spectra = 0
         self.unidentified_spectra = 0
+        self.charge = Cluster._calculate_charge(self._spectra)
 
         for spectrum in self._spectra:
             if spectrum.is_identified():
@@ -48,11 +50,11 @@ class Cluster:
 
         if self.identified_spectra > 0:
             # calculate ratios
-            sequence_counts = Cluster.calculate_sequence_counts(self._spectra, False)
+            self.sequence_counts = Cluster.calculate_sequence_counts(self._spectra, False)
 
             self.sequence_ratios = dict()
-            for sequence in sequence_counts.keys():
-                self.sequence_ratios[sequence] = sequence_counts[sequence] / self.identified_spectra
+            for sequence in self.sequence_counts.keys():
+                self.sequence_ratios[sequence] = self.sequence_counts[sequence] / self.identified_spectra
 
             self.max_ratio = max(self.sequence_ratios.values())
 
@@ -73,6 +75,32 @@ class Cluster:
             self.max_ratio = None
             self.max_sequences = tuple()
             self.max_il_ratio = None
+
+    @staticmethod
+    def _calculate_charge(spectra):
+        """
+        Calculates the average charge from the passed
+        spectra object, ignoring all spectra without
+        a charge state.
+
+        :param spectra: A list of Spectra
+        :return: The charge rounded as an int
+        """
+        n_spectra = 0
+        sum_charge = 0
+
+        for spectrum in spectra:
+            if spectrum.charge is not None:
+                charge = int(spectrum.charge)
+
+                if charge != 0:
+                    n_spectra += 1
+                    sum_charge += charge
+
+        if n_spectra < 1:
+            return 0
+
+        return round(sum_charge / n_spectra, ndigits=0)
 
     def get_spectra(self):
         """
@@ -131,7 +159,7 @@ class Spectrum:
     A spectrum reference.
     """
 
-    def __init__(self, title, precursor_mz, charge, taxids, psms):
+    def __init__(self, title, precursor_mz, charge, taxids, psms, similarity_score=0, json_properties=None):
         """
         Creates a new Spectrum reference.
 
@@ -141,17 +169,22 @@ class Spectrum:
         :param taxids: Set of taxids of the experiments in which the spectrum was observed
         :param psms: A set of psms associated with the spectrum. If None is passed
         an empty set is created.
+        :param similarity_score: The similarity of this spectrum with the cluster's consensus spectrum.
+        :param json_properties: Additional properties of the spectrum encoded as a JSON string.
         :return:
         """
         self.title = title
         self.precursor_mz = precursor_mz
         self.charge = charge
         self.taxids = frozenset(taxids)
+        self.similarity_score = similarity_score
 
         if psms is None:
             self.psms = frozenset()
         else:
             self.psms = frozenset(psms)
+
+        self.properties = json.loads(json_properties) if json_properties is not None else dict()
 
     def get_filename(self):
         """
@@ -171,6 +204,15 @@ class Spectrum:
             end = len(self.title)
 
         return self.title[start + 6:end]
+
+    def get_mass(self):
+        """
+        Calculates the molecular mass based on the precursor_mz and the charge.
+
+        :return: The molecular mass
+        """
+        mass = self.precursor_mz * self.charge - (self.charge * 1.008)
+        return mass
 
     def get_id(self):
         """
@@ -248,6 +290,21 @@ class Spectrum:
             return False
 
         return len(self.psms) > 0
+
+    def get_property(self, key):
+        """
+        Get the property with the defined key.
+
+        :param key: The property's name.
+        :return: The property's value or None if it is not defined
+        """
+        if self.properties is None:
+            return None
+
+        if key in self.properties:
+            return self.properties[key]
+
+        return None
 
     def __eq__(self, other):
         """
@@ -348,6 +405,11 @@ class PSM:
 class PTM:
     """
     Defines a post-translational modification within a peptide
+
+    :ivar position: The PTM's position within the peptide string
+    :ivar accession: The PTM's accession in UNIMOD (if starting with
+                     "MOD:"). This may also represent a PSI entry in
+                     the format [PSI-MS, MS:1001524, fragment neutral loss, 63.998283]
     """
 
     def __init__(self, position, accession):

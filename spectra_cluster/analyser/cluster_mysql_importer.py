@@ -30,6 +30,7 @@ class ClusterSqliteImporter(common.AbstractAnalyser):
         super().__init__()
         self.min_size = 2 # set default minium size 2
         self.file_index = 0
+        self.mysql_host = "localhost"
         self.table_name = "cluster_table_temp1"
         self.table = None 
         self.over_write_table = False
@@ -40,7 +41,7 @@ class ClusterSqliteImporter(common.AbstractAnalyser):
 
     def connect_and_check(self):
         #build the connection
-        self.connection = pymysql.connect(host='localhost',
+        self.connection = pymysql.connect(host=self.mysql_host,
                                           user='pride_cluster_t',
                                           password='pride123',
                                           db='pride_cluster_t',
@@ -76,7 +77,7 @@ class ClusterSqliteImporter(common.AbstractAnalyser):
                         "spec_prj_id varchar(10) COLLATE utf8_bin NOT NULL,"   + \
                         "is_spec_identified TINYINT(1) NOT NULL,"   + \
                         "cluster_fk int(15) NOT NULL,"   + \
-                        "PRIMARY KEY (id)," + "CONSTRAINT FK_cluster_spec FOREIGN KEY (cluster_fk) REFERENCES " +self.table_name + "(id)" +\
+                        "PRIMARY KEY (id)," + "CONSTRAINT FK_" +self.table_name + "_cluster_spec FOREIGN KEY (cluster_fk) REFERENCES `" +self.table_name + "` (id)" +\
                         ")ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;"
         tb_create_prjs = "CREATE TABLE `" + self.table_name + "_projects` ("                     + \
                         "id int(10) NOT NULL AUTO_INCREMENT,"    + \

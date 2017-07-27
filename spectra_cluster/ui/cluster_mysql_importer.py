@@ -10,6 +10,7 @@ Usage:
                        [--min_ratio <ratio>]
                        [--min_identified <spectra>]
                        [--table_name <table_name>] 
+                       [--host <host_name>] 
                        [(--over_write_table)] 
                        [(--only_identified | --only_unidentified)]
   cluster_mysql_importer.py (--help | --version)
@@ -20,6 +21,7 @@ Options:
   --min_ratio=<ratio>                  The minimum ratio a cluster must have to be reported.
   --min_identified=<spectra>           May specify the minimum number of identified spectra a cluster must have.
   --table_name=<table_name>            The table to store this cluster release 
+  --host=<host_name>                   The host mysql  to store this cluster release 
   --over_write_table                   If set, the table will be over write directly.
   --only_identified                    If set, only identified spectra will be reported.
   --only_unidentified                  If set, only unidentified spectra will be reported.
@@ -69,8 +71,9 @@ def create_analyser(arguments):
 
     if arguments["--over_write_table"]:
         analyser.over_write_table = True 
-#    if arguments["--host"] is not None:
-#        analyser.hbase_host = arguments["--host"]
+
+    if arguments["--host"] is not None:
+        analyser.mysql_host = arguments["--host"]
 
     return analyser
 
