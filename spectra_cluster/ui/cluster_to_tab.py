@@ -1,28 +1,24 @@
 """
-cluster_mysql_importer
+cluster_to_tab
 
 Command line interface to the spectra-cluster mysql importer. This tool import all listed  
 clustering files into mysql as a sigle release table. 
 
 Usage:
-  cluster_mysql_importer.py --input <path_to_clustering_files>
+  cluster_to_tab.py --input <path_to_clustering_files>
                        [--min_size <size>] 
                        [--min_ratio <ratio>]
                        [--min_identified <spectra>]
-                       [--table_name <table_name>] 
-                       [--host <host_name>] 
-                       [(--over_write_table)] 
+                       [--output_path <output_path>] 
                        [(--only_identified | --only_unidentified)]
-  cluster_mysql_importer.py (--help | --version)
+  cluster_to_tab.py (--help | --version)
 
 Options:
   -i, --input=<path_to_clustering_files>   Path to the directory with .clustering result files to process.
   --min_size=<size>                    The minimum size of a cluster to be reported. [default: 2]
   --min_ratio=<ratio>                  The minimum ratio a cluster must have to be reported.
   --min_identified=<spectra>           May specify the minimum number of identified spectra a cluster must have.
-  --table_name=<table_name>            The table to store this cluster release 
-  --host=<host_name>                   The host mysql  to store this cluster release 
-  --over_write_table                   If set, the table will be over write directly.
+  --output_path=<output_path>          The tab file to store this cluster release 
   --only_identified                    If set, only identified spectra will be reported.
   --only_unidentified                  If set, only unidentified spectra will be reported.
   -h, --help                           Print this help message.
@@ -30,7 +26,7 @@ Options:
 """
 
 import sys
-import os
+import os,re
 import glob
 from docopt import docopt
     
@@ -38,9 +34,19 @@ from docopt import docopt
 package_path = os.path.abspath(os.path.split(sys.argv[0])[0]) + os.path.sep + ".." + os.path.sep + ".."
 sys.path.insert(0, package_path)
 
-import spectra_cluster.analyser.cluster_mysql_importer as cluster_mysql_importer
+import spectra_cluster.analyser.cluster_to_tab_analyser as cluster_to_tab
 import spectra_cluster.clustering_parser as clustering_parser
 
+def get_ralative_file_name(file_name):
+    p = re.compile(".*\/(.*?.clustering)")
+    m = p.match(file_name)
+    relativeName = ""
+    if m:
+        relativeName = m.group(1)
+        print(relativeName)
+    else:
+        print("ERROR, can not get relative name")
+    return relativeName
 
 def create_analyser(arguments):
     """
@@ -49,7 +55,7 @@ def create_analyser(arguments):
     :param arguments: The command line parameters
     :return: An Comparer object
     """
-    analyser = cluster_mysql_importer.ClusterSqliteImporter()
+    analyser = cluster_to_tab.ClusterSqliteImporter()
 
     if arguments["--only_identified"]:
         analyser.add_to_unidentified = False
@@ -63,17 +69,11 @@ def create_analyser(arguments):
     if arguments["--min_ratio"]:
         analyser.min_ratio = float(arguments["--min_ratio"])
     
-    if arguments["--table_name"]:
-        analyser.table_name = arguments["--table_name"]
+    if arguments["--output_path"]:
+        analyser.output_path = arguments["--output_path"]
 
     if arguments["--min_identified"] is not None:
         analyser.min_identified_spectra = int(arguments["--min_identified"])
-
-    if arguments["--over_write_table"]:
-        analyser.over_write_table = True 
-
-    if arguments["--host"] is not None:
-        analyser.mysql_host = arguments["--host"]
 
     return analyser
 
@@ -82,28 +82,31 @@ def main():
     Primary entry function for the CLI.
     :return:
     """
-    arguments = docopt(__doc__, version='cluster_mysql_importer 1.0 BETA')
-    print(arguments)
-#    sys.exit(1)
+    arguments = docopt(__doc__, version='cluster_to_tab 1.0 BETA')
 
     # create the cluster comparer based on the settings
     analyser = create_analyser(arguments)
-    analyser.connect_and_check()
 
     # make sure the input path exists and has .clustering files
     input_path = arguments['--input']
+
+    if arguments['--output_path']:
+        output_path = arguments['--output_path']
+    else:
+        output_path = '.'
+
     if os.path.isfile(input_path):
         clustering_file = input_path
         parser0 = clustering_parser.ClusteringParser(clustering_file)
         for cluster in parser0:
             analyser.process_cluster(cluster)
     	# do the  importing to database 
-        analyser.import_afile() 
+        output_file = output_path + "/" + get_ralative_file_name(clustering_file) + ".tab"
+        analyser.import_afile(output_file) 
 #        analyser.update_clusters_afile()  #too slow to update a huge table
         analyser.clear() 
         print("Done importing of " + clustering_file)
-        analyser.import_projects()
-        analyser.close_db()
+        analyser.import_projects(output_path)
         return
     
     #else:    
@@ -122,15 +125,14 @@ def main():
     # process all clustering files
     for clustering_file in clustering_files:
         parser0 = clustering_parser.ClusteringParser(clustering_file)
+        output_file = output_path + "/" + get_ralative_file_name(clustering_file) + ".tab"
         for cluster in parser0:
             analyser.process_cluster(cluster)
-    	# do the  importing to database 
-        analyser.import_afile() 
-#        analyser.update_clusters_afile()  #too slow to update a huge table
+    	# do the  importing to tab file 
+        analyser.import_afile(output_file) 
         analyser.clear() 
         print("Done importing of " + clustering_file)
-    analyser.import_projects()
-    analyser.close_db()
+    analyser.import_projects(output_path)
 
 
 

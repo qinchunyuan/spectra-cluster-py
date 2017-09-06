@@ -50,7 +50,7 @@ class ClusterSqliteImporter(common.AbstractAnalyser):
         print("Opened database successfully");
 
         #deal with the table name
-        self.check_table()
+#        self.check_table()
  
     def check_table(self):
         """
@@ -70,6 +70,7 @@ class ClusterSqliteImporter(common.AbstractAnalyser):
                         "n_spec int(10) NOT NULL,"    + \
                         "n_id_spec int (10) NOT NULL,"    + \
                         "n_unid_spec int(10) NOT NULL,"    + \
+                        "max_sequences varchar(100) ,"    + \
                         "PRIMARY KEY (id)" + ")ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;"
         tb_create_spec = "CREATE TABLE `" + self.table_name + "_spec` ("                     + \
                         "id int(15) NOT NULL AUTO_INCREMENT,"    + \
@@ -123,7 +124,6 @@ class ClusterSqliteImporter(common.AbstractAnalyser):
                     self.connection.commit()
         finally:
             print ("checked table")
-            #self.connection.close()
 
     def process_cluster(self, cluster):
         """
@@ -183,10 +183,13 @@ class ClusterSqliteImporter(common.AbstractAnalyser):
             with self.connection.cursor() as cursor:
                 for cluster in self.cluster_list:
                     spectra = cluster.get_spectra()
+                    max_sequences = '||'.join(cluster.max_sequences)
+                    print(max_sequences)
                     insert_sql = "INSERT INTO `" + self.table_name + "`" \
-                            "(cluster_id, cluster_ratio, n_spec, n_id_spec, n_unid_spec)" + \
+                            "(cluster_id, cluster_ratio, n_spec, n_id_spec, n_unid_spec, max_sequences)" + \
                             "VALUES" + \
-                            "('" + cluster.id + "', '" + str(cluster.max_il_ratio) + "', '" + str(cluster.n_spectra) + "', '" + str(cluster.identified_spectra) + "', '" + str(cluster.unidentified_spectra) + "');"
+                            "('" + cluster.id + "', '" + str(cluster.max_il_ratio) + "', '" + str(cluster.n_spectra) + "', '" + str(cluster.identified_spectra) + \
+                            "', '" + str(cluster.unidentified_spectra) + "', '" + max_sequences + "');"
                     cursor.execute(insert_sql)        
                     cluster_key = cursor.lastrowid
                     for spectrum in spectra:
@@ -201,7 +204,7 @@ class ClusterSqliteImporter(common.AbstractAnalyser):
                         cursor.execute(insert_sql2)        
             self.connection.commit()
         except Exception as ex:
-            print(ex.message)
+            print(ex)
         finally:
             print("inserted a cluster list in to table")
 
@@ -210,5 +213,6 @@ class ClusterSqliteImporter(common.AbstractAnalyser):
         clear the cluster list for a new file
         """
         self.cluster_list = [] 
-
+    def close_db(self):
+        self.connection.close()
 
