@@ -72,6 +72,16 @@ def create_analyser(arguments):
 
     return analyser
 
+def deal_single_file(analyser, clustering_file):
+    parser0 = clustering_parser.ClusteringParser(clustering_file)
+    for cluster in parser0:
+        analyser.process_cluster(cluster)
+        # do the  importing to hbase
+    analyser.import_afile() 
+    analyser.clear() 
+    print("Done importing of " + clustering_file)
+
+
 def main():
     """
     Primary entry function for the CLI.
@@ -83,32 +93,28 @@ def main():
 
     # make sure the input path exists and has .clustering files
     input_path = arguments['--input']
-    clustering_files = glob.glob(input_path + "/*.clustering")
-    if len(clustering_files) < 1:
-        print("Error: Cannot find .clustering in path '" + input_path+ "'")
-        sys.exit(1)
-        
-    for clustering_file in clustering_files:
-        if not os.path.isfile(clustering_file):      
-            print("Error: this clustering file is not a file '" + clustering_file + "'")
-            sys.exit(1)
-
+    
     # create the cluster comparer based on the settings
     analyser = create_analyser(arguments)
     analyser.connect_and_check()
+    
+    if os.path.isfile(input_path):
+        deal_single_file(analyser, input_path)
+    else:
+        clustering_files = glob.glob(input_path + "/*.clustering")
+        if len(clustering_files) < 1:
+            print("Error: Cannot find .clustering in path '" + input_path+ "'")
+            sys.exit(1)
+            
+        for clustering_file in clustering_files:
+            if not os.path.isfile(clustering_file):      
+                print("Error: this clustering file is not a file '" + clustering_file + "'")
+                sys.exit(1)
 
-    print("Parsing input .clustering files...")
-    # process all clustering files
-    for clustering_file in clustering_files:
-        parser0 = clustering_parser.ClusteringParser(clustering_file)
-        for cluster in parser0:
-            analyser.process_cluster(cluster)
-    	# do the  importing to hbase
-        analyser.import_afile() 
-        analyser.clear() 
-        print("Done importing of " + clustering_file)
-
-
+        print("Parsing input .clustering files...")
+        # process all clustering files
+        for clustering_file in clustering_files:
+            deal_single_file(analyser, clustering_file)
 
 if __name__ == "__main__":
     main()

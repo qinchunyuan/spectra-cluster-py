@@ -62,13 +62,13 @@ class Cluster:
                                         if self.sequence_ratios[sequence] == self.max_ratio])
 
             # calculate max I/L ratio
-            sequence_counts_il = Cluster.calculate_sequence_counts(self._spectra, True)
+            self.sequence_counts_il = Cluster.calculate_sequence_counts(self._spectra, True)
 
-            sequence_ratios_il = dict()
-            for sequence in sequence_counts_il.keys():
-                sequence_ratios_il[sequence] = sequence_counts_il[sequence] / self.identified_spectra
+            self.sequence_ratios_il = dict()
+            for sequence in self.sequence_counts_il.keys():
+                self.sequence_ratios_il[sequence] = self.sequence_counts_il[sequence] / self.identified_spectra
 
-            self.max_il_ratio = max(sequence_ratios_il.values())
+            self.max_il_ratio = max(self.sequence_ratios_il.values())
         else:
             # set to default values for unidentified clusters
             self.sequence_ratios = dict()
@@ -139,12 +139,17 @@ class Cluster:
         for spectrum in spectra:
             if not spectrum.is_identified():
                 continue
-
+            spectrum_seqs = set()
             for sequence in spectrum.get_clean_sequences():
                 if ignore_i_l:
                     processed_sequence = sequence.replace("I", "L")
                 else:
                     processed_sequence = sequence
+                #avoid sequence  from a spectrum being added multiple times 
+                if processed_sequence not in spectrum_seqs:
+                    spectrum_seqs.add(processed_sequence) 
+                else:
+                    continue #it has been already added as a sequence in this spectrum
 
                 if processed_sequence not in sequence_counts:
                     sequence_counts[processed_sequence] = 1

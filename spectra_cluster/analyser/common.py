@@ -50,22 +50,31 @@ class AbstractAnalyser:
         :return: Boolean indicating whether the cluster should be ignored.
         """
         if cluster.n_spectra < self.min_size:
+#            print("n_spectra < min_size" + str(cluster.n_spectra) +"  "+ str(self.min_size) )
             return True
         if cluster.n_spectra > self.max_size:
+#            print("n_spectra > self.max_size" + str(cluster.n_spectra) +"  "+ str(self.max_size) )
             return True
         if cluster.max_il_ratio is None and (self.min_ratio > 0 or self.max_ratio < 1):
+#            print("max_il_ratio is none")
             return True
         if cluster.max_il_ratio is not None and cluster.max_il_ratio < self.min_ratio:
+#            print("max_il_ratio is little")
             return True
         if cluster.max_il_ratio is not None and cluster.max_il_ratio > self.max_ratio:
+#            print("max_il_ratio is bigger:" +str(cluster.max_il_ratio) + str(self.max_ratio))
             return True
         if cluster.identified_spectra < self.min_identified_spectra:
+#            print("n id is less")
             return True
         if cluster.identified_spectra > self.max_identified_spectra:
+#            print("n id is high")
             return True
         if cluster.unidentified_spectra < self.min_unidentified_spectra:
+#            print("n unid is less")
             return True
         if cluster.unidentified_spectra > self.max_unidentified_spectra:
+#            print("n unid is high")
             return True
 
         return False
