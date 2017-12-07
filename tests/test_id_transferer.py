@@ -11,7 +11,7 @@ class IdTransfererTest(unittest.TestCase):
     Test case for the IdTransfererTest class
     """
     def setUp(self):
-        self.testfile = os.path.join(os.path.dirname(__file__), "test.clustering")
+        self.testfile = os.path.abspath('.') + os.path.sep + "test.clustering"
 
     def test_identifiy_all(self):
         parser = clustering_parser.ClusteringParser(self.testfile)
@@ -20,7 +20,7 @@ class IdTransfererTest(unittest.TestCase):
         for cluster in parser:
             analyser.process_cluster(cluster)
 
-        self.assertEqual(3149, len(analyser.identification_references))
+        self.assertEqual(3151, len(analyser.identification_references))
         self.assertEqual(1, len(analyser.identification_references[11].psms))
         self.assertEqual("HQGVMVGMGQK", analyser.identification_references[11].psms[0].sequence)
         self.assertEqual("/home/jg/Projects/ebi-pride/pride-cluster-2/chimeric-spectra-generator/src/test/resources/PRD000001.st.id.mgf",
@@ -46,7 +46,7 @@ class IdTransfererTest(unittest.TestCase):
         for cluster in parser:
             analyser.process_cluster(cluster)
 
-        self.assertEqual(3149, len(analyser.identification_references))
+        self.assertEqual(3151, len(analyser.identification_references))
 
     def test_keep_identified(self):
         parser = clustering_parser.ClusteringParser(self.testfile)
@@ -55,7 +55,7 @@ class IdTransfererTest(unittest.TestCase):
         for cluster in parser:
             analyser.process_cluster(cluster)
 
-        self.assertEqual(3149, len(analyser.identification_references))
+        self.assertEqual(3151, len(analyser.identification_references))
         self.assertEqual(1, len(analyser.identification_references[11].psms))
         self.assertEqual("HQGVMVGMGQK", analyser.identification_references[11].psms[0].sequence)
         self.assertEqual("/home/jg/Projects/ebi-pride/pride-cluster-2/chimeric-spectra-generator/src/test/resources/PRD000001.st.id.mgf",
@@ -74,6 +74,3 @@ class IdTransfererTest(unittest.TestCase):
 
         self.assertEqual(2, sequence_counts["MEGIGLK"])
         self.assertEqual(1, sequence_counts["ASDA"])
-
-if __name__ == "__main__":
-    unittest.main()

@@ -86,10 +86,16 @@ class FastaEntry:
 
         if format == "first_word":
             start = 1
-            header_len = len(self.header_line)
-            break_pos = [self.header_line.find(symbol) for symbol in (" ", "|")]
-            break_pos = [i if i > 1 else header_len for i in break_pos]
-            end = min(break_pos)
+            end_blank = self.header_line.find(" ")
+            end_pipe = self.header_line.find("|")
+
+            if end_blank < end_pipe:
+                end = end_blank
+            else:
+                end = end_pipe
+
+            if end < start:
+                end = len(self.header_line)
 
         return self.header_line[start:end]
 
@@ -101,7 +107,7 @@ class FastaEntry:
         :param header_line: The header line to analyse
         :return: The format name ("uniprot", "first_word")
         """
-        if header_line[0:4] == ">sp|" or header_line[0:4] == ">tr|" or header_line[0:4] == ">up|":
+        if header_line[0:4] == ">sp|" or header_line[0:4] == ">tr|":
             return "uniprot"
 
         return "first_word"

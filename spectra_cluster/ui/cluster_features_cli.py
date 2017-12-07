@@ -15,7 +15,7 @@ Options:
   -i, --input=<clustering file>        Path to the .clustering result file to process.
   -o, --output=<features.txt>          Path to the output file that should be created. The output will
                                        be formatted as a tab-delimited text file.
-  --min_size=<size>                    The minimum size of a cluster to be reported.
+  --min_size=<size>                    The minimum size of a cluster to be reported. [default: 5]
   --min_ratio=<ratio>                  The minimum ratio a cluster must have to be reported.
   --min_identified=<spectra>           May specify the minimum number of identified spectra a cluster must have.
   -h, --help                           Print this help message.
@@ -29,29 +29,48 @@ from docopt import docopt
 # make the spectra_cluster packages available
 sys.path.insert(0, os.path.abspath('..') + os.path.sep + "..")
 
-from spectra_cluster.analyser.cluster_features import ClusterAsFeatures
+import spectra_cluster.analyser.id_transferer as id_transferer
 import spectra_cluster.clustering_parser as clustering_parser
 
 
-def create_analyser(arguments, output_file):
+def create_analyser(arguments):
     """
-    Creates an ClusterAsFeatures analyser based on the command line
+    Creates an IdTransferer analyser based on the command line
     parameters.
     :param arguments: The command line parameters
-    :param output_file: File object opened to write to the output file
-                        location
-    :return: A ClusterAsFeatures object
+    :return: An IdTransferer object
     """
-    analyser = ClusterAsFeatures(output_file)
+    analyser = id_transferer.IdTransferer()
 
-    if arguments["--min_size"] is not None:
-        analyser.min_size = int(arguments.get("--min_size"))
-    if arguments["--min_ratio"] is not None:
-        analyser.min_ratio = float(arguments.get("--min_ratio"))
+    if arguments["--only_identified"]:
+        analyser.add_to_unidentified = False
+    if arguments["--only_unidentified"]:
+        analyser.add_to_identified = False
+
+    analyser.min_size = arguments["--min_size"]
+    analyser.min_ratio = arguments["--min_ratio"]
+
     if arguments["--min_identified"] is not None:
-        analyser.min_identified_spectra = int(arguments.get("--min_identified"))
+        analyser.min_identified_spectra = arguments["--min_identified"]
 
     return analyser
+
+
+def write_results(identification_references, output_filename):
+    """
+    Writes the identification references as a tab delimited text file
+    to the specified path.
+    :param identification_references: List of identification references.
+    :param output_filename: Path to the output filename
+    :return:
+    """
+    with open(output_filename, "w") as writer:
+        writer.write("filename\tspec_id\tsequence\n")
+
+        for id_ref in identification_references:
+            psm_string = ";".join([str(p) for p in identification_references.psms])
+
+            writer.write(id_ref.filename + "\t" + id_ref.spec_id + "\t" + psm_string + "\n")
 
 
 def main():
@@ -71,26 +90,18 @@ def main():
         print("Error: Output file exists '" + arguments["--output"] + "'")
         sys.exit(1)
 
-    with open(arguments["--output"], "w") as OUT:
-        # create the id transferer based on the settings
-        analyser = create_analyser(arguments, OUT)
+    # create the id transferer based on the settings
+    analyser = create_analyser(arguments)
 
-        # process all clusters
-        parser = clustering_parser.ClusteringParser(arguments["--input"])
+    # process all clusters
+    parser = clustering_parser.ClusteringParser(arguments["--input"])
 
-        print("Parsing input .clustering file...", end="", flush=True)
-        processed_clusters = 0
-        for cluster in parser:
-            analyser.process_cluster(cluster)
+    print("Parsing input .clustering file...")
+    for cluster in parser:
+        analyser.process_cluster(cluster)
 
-            processed_clusters += 1
-            if processed_clusters == 1000:
-                print(".", end="", flush=True)
-                processed_clusters = 0
-
-    # add the header to the output file
-    print("Adding header line...")
-    analyser.add_resultfile_header(arguments["--output"])
+    # create the output file
+    write_results(analyser.identification_references, arguments["--output"])
 
     print("Results written to " + arguments["--output"])
 

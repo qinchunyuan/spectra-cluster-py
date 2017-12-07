@@ -1,2 +1,1 @@
-__version__ = "0.1.0"
-__author__ = "Johannes Griss"
+__all__ = ["clustering_parser"]
