@@ -59,10 +59,8 @@ class AbstractAnalyser:
 #            print("max_il_ratio is none")
             return True
         if cluster.max_il_ratio is not None and cluster.max_il_ratio < self.min_ratio:
-#            print("max_il_ratio is little")
             return True
         if cluster.max_il_ratio is not None and cluster.max_il_ratio > self.max_ratio:
-#            print("max_il_ratio is bigger:" +str(cluster.max_il_ratio) + str(self.max_ratio))
             return True
         if cluster.identified_spectra < self.min_identified_spectra:
 #            print("n id is less")
