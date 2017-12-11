@@ -11,6 +11,7 @@ Usage:
                        [--min_identified <spectra>]
                        [--table_name <table_name>] 
                        [--host <host_name>] 
+                       [--type <type_string>] 
                        [(--check_table)] 
                        [(--over_write_table)] 
                        [(--only_identified | --only_unidentified)]
@@ -23,6 +24,7 @@ Options:
   --min_identified=<spectra>           May specify the minimum number of identified spectra a cluster must have.
   --table_name=<table_name>            The table to store this cluster release 
   --host=<host_name>                   The host phoenix  to store this cluster release 
+  --type=<type_string>                 The types of data to be imported (a:all, c:cluster, s:spectra, p:project, default is a) 
   --check_table                        If set, the table will be checked if exists and if needed to be create new tables 
   --over_write_table                   If set, the table will be over write directly in check process.
   --only_identified                    If set, only identified spectra will be reported.
@@ -79,6 +81,9 @@ def create_analyser(arguments):
 
     if arguments["--host"] is not None:
         analyser.phoenix_host = arguments["--host"]
+    
+    if arguments["--type"] is not None:
+        analyser.type_to_import = list(arguments["--type"])
 
     return analyser
 

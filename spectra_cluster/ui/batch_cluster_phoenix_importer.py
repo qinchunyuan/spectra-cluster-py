@@ -11,6 +11,8 @@ Usage:
                        [--min_identified <spectra>]
                        [--table_name <table_name>] 
                        [--output_path <output_path>] 
+                       [--type <type_string>] 
+                       [(--check_table)] 
                        [--host <host_name>] 
                        [(--over_write_table)] 
                        [(--only_identified | --only_unidentified)]
@@ -24,6 +26,8 @@ Options:
   --table_name=<table_name>            The table to store this cluster release 
   --output_path=<output_path>          The path to tab file to store this cluster release 
   --host=<host_name>                   The host phoenix  to store this cluster release 
+  --type=<type_string>                 The types of data to be imported (a:all, c:cluster, s:spectra, p:project, default is a) 
+  --check_table                        If set, the table will be checked if exists and if needed to be create new tables 
   --over_write_table                   If set, the table will be over write directly.
   --only_identified                    If set, only identified spectra will be reported.
   --only_unidentified                  If set, only unidentified spectra will be reported.
@@ -57,8 +61,14 @@ def filter(filename):
     else:
         print("ERROR, can not get relative name")
     commandLine = "python3 /home/ubuntu/mingze/tools/spectra-cluster-py/spectra_cluster/ui/cluster_phoenix_importer.py " + \
-        " --input " +  filename + \
-        " --min_size " + arguments['--min_size']
+        " --input " +  filename 
+    for key in arguments.keys():
+        if arguments.get(key,"") != None and arguments.get(key,"") != False and key != "--input":
+            opt_value = str(arguments.get(key,""))
+            if opt_value == 'True':
+                opt_value = ""
+            commandLine += " " + key + " " + opt_value
+
     print("Executing %s"%(commandLine))    
     p = subprocess.Popen(commandLine, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     retval = p.wait()
