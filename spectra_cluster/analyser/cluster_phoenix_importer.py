@@ -70,6 +70,7 @@ class ClusterSqliteImporter(common.AbstractAnalyser):
                         "n_unid_spec INTEGER ,"    + \
                         "sequences_ratios VARCHAR, "    + \
                         "sequences_mods VARCHAR, "    + \
+                        "conf_sc VARCHAR, "    + \
                         "spectra_titles VARCHAR, "    + \
                         "consensus_mz VARCHAR, "    + \
                         "consensus_intens VARCHAR "    + \
