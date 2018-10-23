@@ -1,7 +1,0 @@
-.idea
-build/
-dist/
-docs/build
-*.spec
-*.pyc
-*.egg-info

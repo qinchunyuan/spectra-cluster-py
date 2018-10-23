@@ -1,0 +1,19 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="PyUnresolvedReferencesInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredIdentifiers">
+        <list>
+          <option value="src.cluster_mysql_importer.analyser" />
+          <option value="src.analyser.cluster_mysql_importer.analyser" />
+          <option value="src.analyser.clustering_parser.analyser" />
+          <option value="src.analyser.spectrum_mysql_importer.analyser" />
+          <option value="src.spectrum_mysql_importer.analyser" />
+          <option value="src.analyser.cluster_csv_import.analyser" />
+          <option value="src.cluster_csv_importer.analyser" />
+          <option value="cStringIO" />
+        </list>
+      </option>
+    </inspection_tool>
+  </profile>
+</component>
